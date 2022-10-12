@@ -1,0 +1,9 @@
+Hybrid RNAseq Transcription Factor Screen README
+
+This pipeline is used to process RNA-seq data from Mus musculus x M. spretus interspecific hybrid cells and combine it with ChIP-seq and VCF data collected from publicly available databases for use in our novel transcription factor screen outlined in the following preprint: https://www.biorxiv.org/content/10.1101/2022.04.21.489100v2
+ChIP-seq data is collected from the Gene Transcription Regulation Database: https://gtrd.biouml.org/
+VCF data is collected from The Mouse Genome Project: https://www.sanger.ac.uk/data/mouse-genomes-project/
+
+Scripts labeled 1-6 are used to process RNA-seq data in parallel to get TPM counts.
+7ANOVA.R is used to identify genes showing condition specific ASE, and the second part is used to identify candidate TFs using the output from script 9.
+Scripts 8 and 9 are used to organize ChIP-seq and VCF data into nested dictionaries for faster searching, and generate data identify candidate TFs. 
