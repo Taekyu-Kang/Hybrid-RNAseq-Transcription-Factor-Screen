@@ -25,16 +25,17 @@ def parse_htseq(filename,metadata,sep="\t"):
 	htseq = pd.read_csv(filename,sep=sep,header=None)
 	htseq = htseq.rename(columns={0:"Gene",1:sampleID})
 	htseq1 = htseq[[x.startswith("EN") or x.startswith("MG") for x in htseq["Gene"]]]
-	#htseq2 = htseq1.set_index("Gene")
 
 	return htseq1
 
+#function to convert counts to TPM
 def make_TPM(colname,df):
 	df[colname+"_len"] = df[colname].div(df.Length,axis=0)
 	df["ssum"] = df[colname+"_len"].sum()
 	df[colname+"_div"] = df[colname+"_len"].div(df.ssum,axis=0)
 	df[colname+"_TPM"] = df[colname+"_div"].multiply(1000000)
 
+#function to parse file containing homologous genes 
 def parse_homs(filename,sep="\t"):
 	homsdict = {"Gene":[],"GeneID":[]}
 	with open(filename) as f:
@@ -69,7 +70,7 @@ if __name__ == "__main__":
 	homs_df = parse_homs(homs_file)
 	print len(homs_df), "genes with homology between M.mus and M.spr."
 
-	#this is processed transcript lengths from get_transcript_lengths.R
+	#read in file containing transcript lengths collected from GTF
 	transcript_length = pd.read_csv(transcript_length_file,sep="\t")
 	print len(transcript_length), "genes with transcript length in GTF."
 
@@ -84,23 +85,25 @@ if __name__ == "__main__":
 	#merge all htseq files along with transcript length
 	combined = reduce(lambda left,right: pd.merge(left,right,on=["Gene"],how="outer"),htseq_all).fillna(0)
 	print len(htseq_all), "files combined."
-	#print combined.head()
+	
 	combined = combined.set_index("Gene")
 	combined1 = combined[(combined != 0).all(axis=1)] #removes those with 0 in all samples
 	col_names = combined1.columns.tolist()
 	col_names.remove("Length")
 
+	#convert to TPM
 	for col_name in col_names:
 		make_TPM(col_name,combined1)
 
+	#just grab TPM data
 	col_names = combined1.columns.tolist()
 	tpm_df = combined1[[name for name in col_names if "TPM" in name]]
 
 	tpm_df.to_csv(outdir+outID+"_TPM.txt",sep="\t",index=True)
 
 	tpm_df_homs = pd.merge(homs_df,tpm_df,on=["Gene"],how="outer").fillna(0)
-	#tpm_df_homs = tpm_df_homs.dropna(axis=0)
 
+	#split up allele specific data, then combine according to homologous genes and clean up
 	mm_df = tpm_df_homs[tpm_df_homs["Gene"].str.contains("ENS")]
 	ms_df = tpm_df_homs[tpm_df_homs["Gene"].str.contains("MGP")]
 
@@ -115,11 +118,8 @@ if __name__ == "__main__":
 	ms_df.columns = ms_newcols
 
 	org_df = pd.merge(mm_df,ms_df,on=["GeneID"],how="outer").fillna(0)
-	#print org_df.head(n=10)
-	#sorted_df = sorted_df.dropna(axis=0)
 	org_colnames = org_df.columns.tolist()
 	org_colnames.sort()
-	#print org_colnames
 	sorted_df = org_df[org_colnames]
 
 	sorted_df.to_csv(outdir+outID+"_organized_TPM.txt",sep="\t",index=True)
